@@ -8,8 +8,6 @@ toc:
     href: "#sdks"
   - label: "架构"
     href: "#architecture"
-  - label: "协议"
-    href: "#protocol"
 ---
 
 模块化、可扩展的微信 iLink Bot SDK —— 提供 **Node.js**、**Python**、**Go**、**Rust** 四种语言。同时内含 **Pi 编程助手扩展**，微信扫码即可与 Pi 对话。[GitHub](https://github.com/corespeed-io/wechatbot)。
@@ -117,18 +115,5 @@ await bot.start()
     ['依赖', '零运行时', 'stdlib / reqwest+serde'],
   ]}
 />
-
-</Section>
-
-<Section id="protocol" title="协议概览">
-
-iLink Bot API 基于 HTTP/JSON，核心是 `context_token` —— 每个回复必须回传入站消息中的 token。
-
-- **`GET /get_bot_qrcode`** —— 获取登录二维码
-- **`POST /getupdates`** —— 长轮询消息（35 秒挂起）
-- **`POST /sendmessage`** —— 发送文本或媒体
-- **`POST /sendtyping`** —— 输入状态指示器
-- **`POST CDN /upload`** —— AES 加密媒体上传
-- 错误码 `-14` → 会话过期 → 自动重新登录
 
 </Section>

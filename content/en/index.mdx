@@ -8,8 +8,6 @@ toc:
     href: "#sdks"
   - label: "Architecture"
     href: "#architecture"
-  - label: "Protocol"
-    href: "#protocol"
 ---
 
 A modular, extensible WeChat iLink Bot SDK — available in **Node.js**, **Python**, **Go**, and **Rust**. Plus a **Pi coding agent extension** that lets you chat with Pi from WeChat. [GitHub](https://github.com/corespeed-io/wechatbot).
@@ -117,18 +115,5 @@ Shared capabilities: QR login, long-poll, context_token management, AES-128-ECB 
     ['Dependencies', '0 runtime', 'stdlib / reqwest+serde'],
   ]}
 />
-
-</Section>
-
-<Section id="protocol" title="Protocol overview">
-
-The iLink Bot API is HTTP/JSON, centered on `context_token` — every reply must echo back the token from the incoming message.
-
-- **`GET /get_bot_qrcode`** — QR code for login
-- **`POST /getupdates`** — long-poll messages (35s hold)
-- **`POST /sendmessage`** — send text or media
-- **`POST /sendtyping`** — typing indicator
-- **`POST CDN /upload`** — AES-encrypted media upload
-- Error `-14` → session expired → auto re-login
 
 </Section>

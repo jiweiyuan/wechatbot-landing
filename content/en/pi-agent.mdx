@@ -24,13 +24,12 @@ A **pi extension** that bridges WeChat to your [Pi coding agent](https://github.
 
 <Section id="how-it-works" title="How it works">
 
-<CodeBlock lang="diagram" lineHeight="1.3" showLineNumbers={false}>
-{`┌──────────────┐      ┌──────────────┐      ┌──────────┐
-│  WeChat User │ ←──→ │  iLink API   │ ←──→ │ Pi Agent │
-│  (phone)     │      │  (Tencent)   │      │ (laptop) │
-└──────────────┘      └──────────────┘      └──────────┘
-                              ↑
-                   @wechatbot/wechatbot SDK`}
+<CodeBlock lang="mermaid" lineHeight="1.3" showLineNumbers={false}>
+{`graph LR
+    A["📱 WeChat User<br/>(phone)"] <--> B["☁️ iLink API<br/>(Tencent)"]
+    B <--> C["🤖 Pi Agent<br/>(laptop)"]
+    B --- D["@wechatbot/wechatbot SDK"]
+    style D fill:none,stroke:none,color:#666`}
 </CodeBlock>
 
 1. You run `/wechat` in pi

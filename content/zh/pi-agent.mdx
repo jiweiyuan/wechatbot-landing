@@ -24,13 +24,12 @@ toc:
 
 <Section id="how-it-works" title="工作原理">
 
-<CodeBlock lang="diagram" lineHeight="1.3" showLineNumbers={false}>
-{`┌──────────────┐      ┌──────────────┐      ┌──────────┐
-│  微信用户     │ ←──→ │  iLink API   │ ←──→ │ Pi 助手  │
-│  (手机)      │      │  (腾讯)      │      │ (笔记本) │
-└──────────────┘      └──────────────┘      └──────────┘
-                              ↑
-                   @wechatbot/wechatbot SDK`}
+<CodeBlock lang="mermaid" lineHeight="1.3" showLineNumbers={false}>
+{`graph LR
+    A["📱 微信用户<br/>(手机)"] <--> B["☁️ iLink API<br/>(腾讯)"]
+    B <--> C["🤖 Pi 助手<br/>(笔记本)"]
+    B --- D["@wechatbot/wechatbot SDK"]
+    style D fill:none,stroke:none,color:#666`}
 </CodeBlock>
 
 1. 在 pi 中运行 `/wechat`

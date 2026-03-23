@@ -1,6 +1,6 @@
 ---
 title: "Node.js SDK — @wechatbot/wechatbot"
-description: "TypeScript 优先的微信 iLink Bot SDK，中间件管道，可插拔存储，41 个测试。"
+description: "TypeScript 优先的微信 iLink Bot SDK，统一的发送/下载 API，完整媒体支持，69 个测试。"
 toc:
   - label: "安装"
     href: "#install"
@@ -8,23 +8,25 @@ toc:
     href: "#quick-start"
   - label: "配置"
     href: "#configuration"
+  - label: "发送消息"
+    href: "#sending"
+  - label: "下载媒体"
+    href: "#downloading"
   - label: "中间件"
     href: "#middleware"
-  - label: "媒体"
-    href: "#media"
   - label: "存储"
     href: "#storage"
   - label: "事件"
     href: "#events"
-  - label: "消息构建器"
-    href: "#message-builder"
+  - label: "进阶"
+    href: "#advanced"
   - label: "API 参考"
     href: "#api-reference"
   - label: "项目结构"
     href: "#structure"
 ---
 
-Node.js SDK 是功能最丰富的实现。**42 个源文件**，**10 个模块**，**41 个测试**，**零运行时依赖**。需要 Node.js ≥ 22。
+Node.js SDK 是功能最丰富的实现。**69 个测试**，**零运行时依赖**。需要 Node.js ≥ 22。
 
 <Section id="install" title="安装">
 
@@ -69,6 +71,71 @@ const bot = new WeChatBot({
 
 </Section>
 
+<Section id="sending" title="发送消息 — reply() 和 send()">
+
+两个方法处理所有发送需求。`reply()` 回复收到的消息（自动 context_token、自动取消输入状态）；`send()` 按用户 ID 发送。
+
+两者接受相同的 `SendContent` 类型：
+
+```typescript
+// 文本（字符串简写）
+await bot.reply(msg, '你好！')
+
+// 文本（对象）
+await bot.reply(msg, { text: '你好！' })
+
+// 图片 + 可选标题
+await bot.reply(msg, { image: pngBuffer, caption: '截图' })
+
+// 视频 + 可选标题
+await bot.reply(msg, { video: mp4Buffer, caption: '看看这个' })
+
+// 文件 — 按扩展名自动路由：
+//   .png/.jpg/.gif/.webp → 作为图片发送
+//   .mp4/.mov/.webm      → 作为视频发送
+//   其他                  → 作为文件附件发送
+await bot.reply(msg, { file: data, fileName: 'report.pdf' })
+await bot.reply(msg, { file: data, fileName: 'photo.png' })   // → 图片！
+
+// 从 URL 发送 — 自动下载 + 自动检测类型
+await bot.reply(msg, { url: 'https://example.com/photo.jpg' })
+await bot.reply(msg, { url: 'https://picsum.photos/400/300', caption: '随机图片！' })
+
+// send() 用法相同，只是用 userId 代替 message
+await bot.send(userId, '你好！')
+await bot.send(userId, { image: buffer, caption: '嗨！' })
+```
+
+</Section>
+
+<Section id="downloading" title="下载媒体">
+
+一个方法下载消息中的任何媒体类型：
+
+```typescript
+bot.onMessage(async (msg) => {
+  const media = await bot.download(msg)
+  if (!media) return  // 消息中没有媒体
+
+  console.log(media.type)      // 'image' | 'file' | 'video' | 'voice'
+  console.log(media.data)      // Buffer
+  console.log(media.fileName)  // 'report.pdf'（文件）
+  console.log(media.format)    // 'wav' | 'silk'（语音）
+
+  // 保存到磁盘
+  await writeFile(`/tmp/${media.fileName ?? 'download'}`, media.data)
+
+  // 回传
+  if (media.type === 'image') {
+    await bot.reply(msg, { image: media.data, caption: '收到你的图片！' })
+  }
+})
+```
+
+优先级：图片 > 文件 > 视频 > 语音。语音自动从 SILK 转码为 WAV（需安装 `silk-wasm`）。
+
+</Section>
+
 <Section id="middleware" title="中间件">
 
 Express/Koa 风格的可组合中间件管道，在消息处理器之前运行。
@@ -96,25 +163,6 @@ bot.use(async (ctx, next) => {
 
 </Section>
 
-<Section id="media" title="媒体处理">
-
-完整的图片/文件/语音/视频支持，AES-128-ECB CDN 加密。
-
-```typescript
-bot.onMessage(async (msg) => {
-  if (msg.type === 'image' && msg.images[0]?.media) {
-    const data = await bot.downloadMedia(msg.images[0].media, msg.images[0].aeskey)
-    await writeFile('photo.jpg', data)
-  }
-
-  if (msg.type === 'voice' && msg.voices[0]?.text) {
-    await bot.reply(msg, `你说了: "${msg.voices[0].text}"`)
-  }
-})
-```
-
-</Section>
-
 <Section id="storage" title="可插拔存储">
 
 ```typescript
@@ -136,18 +184,20 @@ bot.on('error', (err) => console.error(err))
 
 </Section>
 
-<Section id="message-builder" title="消息构建器">
+<Section id="advanced" title="进阶：MessageBuilder">
+
+对于复杂的多项消息，直接使用构建器：
 
 ```typescript
-const msg = bot.createMessage(userId)
+const payload = bot.createMessage(userId)
   .text("这是你的报告：")
   .file({ media: cdnRef, fileName: 'report.pdf', size: 542188 })
   .build()
 
-await bot.sendMessage(msg)
+await bot.sendRaw(payload)
 ```
 
-长文本自动在自然边界处分片（段落 → 换行 → 空格 → 2000字符硬切）。
+其他进阶方法：`bot.upload(opts)` 仅上传到 CDN 不发送，`bot.downloadRaw(media, aeskey?)` 直接访问 CDN 引用。
 
 </Section>
 
@@ -155,18 +205,24 @@ await bot.sendMessage(msg)
 
 <ComparisonTable
   title="核心方法"
-  headers={['方法', '描述', '返回']}
+  headers={['方法', '描述']}
   rows={[
-    ['new WeChatBot(opts?)', '创建实例', 'WeChatBot'],
-    ['bot.login(opts?)', '二维码登录', 'Promise<Credentials>'],
-    ['bot.start()', '启动轮询', 'Promise<void>'],
-    ['bot.stop()', '优雅停止', 'void'],
-    ['bot.onMessage(handler)', '注册处理器', 'this'],
-    ['bot.reply(msg, text)', '回复消息', 'Promise<void>'],
-    ['bot.send(userId, text)', '发送消息', 'Promise<void>'],
-    ['bot.sendTyping(userId)', '显示输入中', 'Promise<void>'],
-    ['bot.downloadMedia(media)', '从 CDN 下载', 'Promise<Buffer>'],
-    ['bot.use(middleware)', '添加中间件', 'this'],
+    ['new WeChatBot(opts?)', '创建实例'],
+    ['bot.login(opts?)', '二维码登录（已有凭证则跳过）'],
+    ['bot.start()', '启动长轮询'],
+    ['bot.run(opts?)', 'login() + start() 合一'],
+    ['bot.stop()', '优雅停止'],
+    ['bot.onMessage(handler)', '注册消息处理器'],
+    ['bot.reply(msg, content)', '回复 — 文本、图片、视频、文件或 URL'],
+    ['bot.send(userId, content)', '发送给用户 — 相同内容类型'],
+    ['bot.download(msg)', '下载消息中的任何媒体'],
+    ['bot.sendTyping(userId)', '显示"正在输入"'],
+    ['bot.stopTyping(userId)', '取消输入指示'],
+    ['bot.use(middleware)', '添加中间件'],
+    ['bot.sendRaw(payload)', '发送 MessageBuilder 预构建消息'],
+    ['bot.upload(opts)', '仅上传到 CDN'],
+    ['bot.downloadRaw(media)', '从原始 CDN 引用下载'],
+    ['bot.createMessage(userId)', '创建 MessageBuilder'],
   ]}
 />
 
@@ -176,12 +232,13 @@ await bot.sendMessage(msg)
 
 ```
 nodejs/src/
-├── core/           ← 客户端、类型化事件、错误层次
+├── core/           ← 客户端（统一 reply/send/download）、事件、错误
 ├── transport/      ← HTTP 客户端（重试 + 超时）
 ├── protocol/       ← iLink API 调用 + 线路类型
 ├── auth/           ← 二维码登录 + 凭证持久化
 ├── messaging/      ← 轮询器、发送器、输入状态、上下文存储
-├── media/          ← AES-128-ECB 加密、CDN 上传/下载
+├── media/          ← AES 加密、CDN 上传/下载、MIME 路由、
+│                      语音转码、远程 URL 下载、Markdown 清理
 ├── middleware/      ← 引擎 + 4 个内置中间件
 ├── message/        ← 解析器、构建器、友好类型
 ├── storage/        ← 可插拔（文件、内存、接口）

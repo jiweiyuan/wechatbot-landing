@@ -1,6 +1,6 @@
 ---
 title: "Node.js SDK — @wechatbot/wechatbot"
-description: "TypeScript-first WeChat iLink Bot SDK with middleware pipeline, pluggable storage, and 41 tests."
+description: "TypeScript-first WeChat iLink Bot SDK with unified send/download API, middleware pipeline, full media support, and 69 tests."
 toc:
   - label: "Install"
     href: "#install"
@@ -8,23 +8,25 @@ toc:
     href: "#quick-start"
   - label: "Configuration"
     href: "#configuration"
+  - label: "Sending"
+    href: "#sending"
+  - label: "Downloading"
+    href: "#downloading"
   - label: "Middleware"
     href: "#middleware"
-  - label: "Media"
-    href: "#media"
   - label: "Storage"
     href: "#storage"
   - label: "Events"
     href: "#events"
-  - label: "Message builder"
-    href: "#message-builder"
+  - label: "Advanced"
+    href: "#advanced"
   - label: "API reference"
     href: "#api-reference"
   - label: "Structure"
     href: "#structure"
 ---
 
-The Node.js SDK is the most feature-rich implementation. **42 source files**, **10 modules**, **41 tests**, **zero runtime dependencies**. Requires Node.js ≥ 22.
+The Node.js SDK is the most feature-rich implementation. **69 tests**, **zero runtime dependencies**. Requires Node.js ≥ 22.
 
 <Section id="install" title="Install">
 
@@ -69,6 +71,71 @@ const bot = new WeChatBot({
 
 </Section>
 
+<Section id="sending" title="Sending — reply() and send()">
+
+Two methods handle all outgoing messages. `reply()` replies to an incoming message (auto context_token, auto cancel typing). `send()` sends to a user by ID.
+
+Both accept the same `SendContent` type:
+
+```typescript
+// Text (string shorthand)
+await bot.reply(msg, 'Hello!')
+
+// Text (object)
+await bot.reply(msg, { text: 'Hello!' })
+
+// Image with optional caption
+await bot.reply(msg, { image: pngBuffer, caption: 'Screenshot' })
+
+// Video with optional caption
+await bot.reply(msg, { video: mp4Buffer, caption: 'Check this out' })
+
+// File — auto-routes by extension:
+//   .png/.jpg/.gif/.webp → sent as image
+//   .mp4/.mov/.webm      → sent as video
+//   everything else      → sent as file attachment
+await bot.reply(msg, { file: data, fileName: 'report.pdf' })
+await bot.reply(msg, { file: data, fileName: 'photo.png' })   // → image!
+
+// From URL — auto-download + auto-detect type from Content-Type / extension
+await bot.reply(msg, { url: 'https://example.com/photo.jpg' })
+await bot.reply(msg, { url: 'https://picsum.photos/400/300', caption: 'Random!' })
+
+// send() works the same way, just takes userId instead of message
+await bot.send(userId, 'Hello!')
+await bot.send(userId, { image: buffer, caption: 'Hi!' })
+```
+
+</Section>
+
+<Section id="downloading" title="Downloading media">
+
+One method downloads any media type from an incoming message:
+
+```typescript
+bot.onMessage(async (msg) => {
+  const media = await bot.download(msg)
+  if (!media) return  // no media in this message
+
+  console.log(media.type)      // 'image' | 'file' | 'video' | 'voice'
+  console.log(media.data)      // Buffer
+  console.log(media.fileName)  // 'report.pdf' (for files)
+  console.log(media.format)    // 'wav' | 'silk' (for voice)
+
+  // Save to disk
+  await writeFile(`/tmp/${media.fileName ?? 'download'}`, media.data)
+
+  // Echo back
+  if (media.type === 'image') {
+    await bot.reply(msg, { image: media.data, caption: 'Got your image!' })
+  }
+})
+```
+
+Priority: image > file > video > voice. Voice is auto-transcoded from SILK to WAV (if `silk-wasm` is installed).
+
+</Section>
+
 <Section id="middleware" title="Middleware">
 
 Express/Koa-style composable middleware pipeline. Runs before message handlers.
@@ -95,25 +162,6 @@ bot.use(async (ctx, next) => {
 ```
 
 Middleware that doesn't call `next()` stops the chain — perfect for auth, filtering, routing.
-
-</Section>
-
-<Section id="media" title="Media handling">
-
-Full image/file/voice/video support with AES-128-ECB CDN crypto.
-
-```typescript
-bot.onMessage(async (msg) => {
-  if (msg.type === 'image' && msg.images[0]?.media) {
-    const data = await bot.downloadMedia(msg.images[0].media, msg.images[0].aeskey)
-    await writeFile('photo.jpg', data)
-  }
-
-  if (msg.type === 'voice' && msg.voices[0]?.text) {
-    await bot.reply(msg, `You said: "${msg.voices[0].text}"`)
-  }
-})
-```
 
 </Section>
 
@@ -153,18 +201,20 @@ bot.on('close', () => { })
 
 </Section>
 
-<Section id="message-builder" title="Message builder">
+<Section id="advanced" title="Advanced: MessageBuilder">
+
+For complex multi-item messages, use the builder directly:
 
 ```typescript
-const msg = bot.createMessage(userId)
+const payload = bot.createMessage(userId)
   .text("Here's your report:")
   .file({ media: cdnRef, fileName: 'report.pdf', size: 542188 })
   .build()
 
-await bot.sendMessage(msg)
+await bot.sendRaw(payload)
 ```
 
-Long text is auto-chunked at natural boundaries (paragraph → line → space → 2000 char hard cut).
+Other advanced methods: `bot.upload(opts)` for CDN upload without sending, `bot.downloadRaw(media, aeskey?)` for raw CDN references.
 
 </Section>
 
@@ -172,18 +222,24 @@ Long text is auto-chunked at natural boundaries (paragraph → line → space �
 
 <ComparisonTable
   title="Core methods"
-  headers={['Method', 'Description', 'Returns']}
+  headers={['Method', 'Description']}
   rows={[
-    ['new WeChatBot(opts?)', 'Create instance', 'WeChatBot'],
-    ['bot.login(opts?)', 'QR login', 'Promise<Credentials>'],
-    ['bot.start()', 'Start poll loop', 'Promise<void>'],
-    ['bot.stop()', 'Stop gracefully', 'void'],
-    ['bot.onMessage(handler)', 'Register handler', 'this'],
-    ['bot.reply(msg, text)', 'Reply to message', 'Promise<void>'],
-    ['bot.send(userId, text)', 'Send to user', 'Promise<void>'],
-    ['bot.sendTyping(userId)', 'Show typing', 'Promise<void>'],
-    ['bot.downloadMedia(media)', 'Download from CDN', 'Promise<Buffer>'],
-    ['bot.use(middleware)', 'Add middleware', 'this'],
+    ['new WeChatBot(opts?)', 'Create instance'],
+    ['bot.login(opts?)', 'QR login (skips if credentials exist)'],
+    ['bot.start()', 'Start long-poll loop'],
+    ['bot.run(opts?)', 'login() + start() in one call'],
+    ['bot.stop()', 'Stop gracefully'],
+    ['bot.onMessage(handler)', 'Register message handler'],
+    ['bot.reply(msg, content)', 'Reply — text, image, video, file, or URL'],
+    ['bot.send(userId, content)', 'Send to user — same content types'],
+    ['bot.download(msg)', 'Download any media from message'],
+    ['bot.sendTyping(userId)', 'Show "typing..." indicator'],
+    ['bot.stopTyping(userId)', 'Cancel typing indicator'],
+    ['bot.use(middleware)', 'Add middleware to pipeline'],
+    ['bot.sendRaw(payload)', 'Send pre-built MessageBuilder payload'],
+    ['bot.upload(opts)', 'Upload to CDN without sending'],
+    ['bot.downloadRaw(media)', 'Download from raw CDN reference'],
+    ['bot.createMessage(userId)', 'Create MessageBuilder for user'],
   ]}
 />
 
@@ -193,12 +249,13 @@ Long text is auto-chunked at natural boundaries (paragraph → line → space �
 
 ```
 nodejs/src/
-├── core/           ← WeChatBot client, typed events, error hierarchy
+├── core/           ← Client (unified reply/send/download), events, errors
 ├── transport/      ← HTTP client with retry & timeout
 ├── protocol/       ← Raw iLink API calls + wire types
 ├── auth/           ← QR login + credential persistence
 ├── messaging/      ← Poller, Sender, Typing, ContextStore
-├── media/          ← AES-128-ECB crypto, CDN upload/download
+├── media/          ← AES crypto, CDN upload/download, MIME routing,
+│                      voice transcode, remote URL, markdown strip
 ├── middleware/      ← Express-style engine + 4 builtins
 ├── message/        ← Parser, Builder, friendly types
 ├── storage/        ← Pluggable (file, memory, interface)

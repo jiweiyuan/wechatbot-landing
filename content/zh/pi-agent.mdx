@@ -1,6 +1,6 @@
 ---
 title: "Pi Agent — 在微信中与 Pi 对话"
-description: "Pi 扩展：微信扫码即可与 Pi 编程助手对话。使用 @wechatbot/wechatbot SDK。"
+description: "Pi 扩展：微信扫码即可与 Pi 编程助手对话。支持文本、图片、文件、语音、视频。"
 toc:
   - label: "工作原理"
     href: "#how-it-works"
@@ -10,6 +10,8 @@ toc:
     href: "#usage"
   - label: "消息流程"
     href: "#message-flow"
+  - label: "媒体支持"
+    href: "#media-support"
   - label: "命令"
     href: "#commands"
   - label: "Pi API"
@@ -18,7 +20,7 @@ toc:
     href: "#features"
 ---
 
-一个 **pi 扩展**，将微信桥接到你的 [Pi 编程助手](https://github.com/badlogic/pi-mono)。微信扫码 → 直接在微信里与 Pi 对话。使用 `@wechatbot/wechatbot` SDK 处理所有 iLink 协议操作。
+一个 **pi 扩展**，将微信桥接到你的 [Pi 编程助手](https://github.com/badlogic/pi-mono)。微信扫码 → 直接在微信里与 Pi 对话。支持文本、图片、文件、语音和视频。使用 `@wechatbot/wechatbot` SDK 处理所有 iLink 协议操作。
 
 <Section id="how-it-works" title="工作原理">
 
@@ -33,7 +35,7 @@ toc:
 
 1. 在 pi 中运行 `/wechat`
 2. 扩展创建 `WeChatBot` 实例 → 调用 `bot.login()`
-3. SDK 调用 iLink API → 获取二维码 → 在 pi TUI 中显示
+3. SDK 调用 iLink API → 获取二维码 → 在终端中显示
 4. 用手机微信扫码
 5. **微信消息 → `pi.sendUserMessage()`** → 成为 pi prompt
 6. **`pi.on('agent_end')` → `bot.reply()`** → 发回微信
@@ -43,20 +45,22 @@ toc:
 
 <Section id="install" title="安装">
 
-**方式一：** 直接加载：
+**从 npm 安装（推荐）：**
+
+```bash
+pi install npm:@wechatbot/pi-agent
+```
+
+**或直接加载：**
 
 ```bash
 pi -e /path/to/wechatbot/pi-agent/src/index.ts
 ```
 
-**方式二：** 复制到扩展目录（自动加载）：
+**或复制到扩展目录（自动加载）：**
 
 ```bash
-# 全局
 cp -r pi-agent/ ~/.pi/agent/extensions/wechat-bridge/
-
-# 项目级
-cp -r pi-agent/ .pi/extensions/wechat-bridge/
 ```
 
 </Section>
@@ -66,11 +70,11 @@ cp -r pi-agent/ .pi/extensions/wechat-bridge/
 ```bash
 > /wechat
 
-  ╔══════════════════════════════════════════╗
-  ║    📱 在微信中扫描此二维码               ║
-  ╚══════════════════════════════════════════╝
+  📱 在微信中扫描此二维码：
 
-  https://weixin.qq.com/x/cAbCdEfGhIj
+    ▄▄▄▄▄▄▄ ▄▄▄ ▄▄▄▄▄▄▄
+    █ ▄▄▄ █ █▀█ █ ▄▄▄ █
+    ...
 
 [wechat] 已扫码 — 在微信中确认
 [wechat] 登录确认
@@ -94,7 +98,7 @@ cp -r pi-agent/ .pi/extensions/wechat-bridge/
          │
          ├── bot.sendTyping(userId)        → "对方正在输入中..."
          │
-         ├── pi.sendUserMessage(msg.text)  → 成为 pi prompt
+         ├── pi.sendUserMessage(content)   → 成为 pi prompt
          │
          ▼
   Pi 助手处理（工具、思考...）
@@ -103,9 +107,39 @@ cp -r pi-agent/ .pi/extensions/wechat-bridge/
   pi.on('agent_end') 触发
          │
          ├── 提取助手文本
+         ├── stripMarkdown()               → 清理 Markdown
+         ├── 检测生成的文件路径             → 作为媒体发送
          ├── bot.stopTyping(userId)
-         └── bot.reply(msg, text)          → 发回微信`}
+         └── bot.reply(msg, content)       → 发回微信`}
 </CodeBlock>
+
+</Section>
+
+<Section id="media-support" title="媒体支持">
+
+扩展处理所有微信消息类型 —— 不仅仅是文本。
+
+<ComparisonTable
+  title="入站（微信 → Pi）"
+  headers={['类型', '处理方式']}
+  rows={[
+    ['文本', '直接作为 pi prompt 发送'],
+    ['图片', '下载 → base64 → 作为 ImageContent 发送给视觉模型'],
+    ['语音', '优先使用微信转文字；否则下载 SILK 音频'],
+    ['文件', '文本文件（.txt, .md, .py 等）：内容包含在 prompt 中。其他：描述元数据'],
+    ['视频', '下载 → 保存到临时文件 → 告诉 Pi 文件路径'],
+  ]}
+/>
+
+<ComparisonTable
+  title="出站（Pi → 微信）"
+  headers={['类型', '处理方式']}
+  rows={[
+    ['文本', '去除 Markdown 格式 → 纯文本发送'],
+    ['生成的文件', '在回复中检测文件路径 → 通过 bot.reply({ file }) 自动发送'],
+    ['自动路由', '.png → 图片消息，.mp4 → 视频消息，.pdf → 文件附件'],
+  ]}
+/>
 
 </Section>
 
@@ -118,6 +152,8 @@ cp -r pi-agent/ .pi/extensions/wechat-bridge/
 /wechat-send <文本>  手动发送文本给微信用户
 ```
 
+已连接时运行 `/wechat` 会显示菜单：断开连接、查看状态或取消。
+
 </Section>
 
 <Section id="pi-apis" title="使用的 Pi API">
@@ -126,34 +162,27 @@ cp -r pi-agent/ .pi/extensions/wechat-bridge/
   title="扩展 API 使用"
   headers={['Pi API', '用途', '时机']}
   rows={[
-    ['pi.registerCommand()', '/wechat 命令', '扩展加载时'],
-    ['pi.sendUserMessage()', '微信消息 → pi prompt', '每条消息'],
-    ['pi.on(agent_end)', '捕获回复 → 发微信', 'Agent 完成后'],
+    ['pi.registerCommand()', '/wechat, /wechat-send, /wechat-disconnect', '扩展加载时'],
+    ['pi.sendUserMessage()', '微信消息 → pi prompt（文本或图片+文本）', '每条消息'],
+    ['pi.on(agent_end)', '捕获回复 → stripMarkdown → 发微信', 'Agent 完成后'],
     ['pi.on(message_update)', '跟踪流式文本', '流式输出时'],
-    ['ctx.ui.setWidget()', '显示二维码 URL', '登录时'],
     ['ctx.ui.setStatus()', '连接状态显示', '全程'],
     ['pi.on(session_shutdown)', '退出清理', '关闭时'],
   ]}
 />
 
-扩展使用 `@wechatbot/wechatbot` SDK 处理所有微信协议操作 —— 不是自定义客户端。
-
 </Section>
 
-<Section id="features" title="功能与限制">
+<Section id="features" title="功能">
 
-**功能：**
 - 零配置 —— `/wechat` 加扫码
+- **完整媒体支持** —— 图片（视觉模型）、语音、文件、视频
+- **Markdown 清理** —— AI 输出 → 干净纯文本发到微信
+- **自动媒体路由** —— 生成的 `.png` 作为图片发送，`.mp4` 作为视频等
 - 凭证持久化 —— `~/.wechatbot/`，重启跳过扫码
 - 会话恢复 —— 收到 `-14` 自动重新登录
 - 输入指示器 —— Pi 思考时显示"对方正在输入中"
 - 文本分片 —— 长回复在 2000 字符处分片
 - 优雅关闭 —— `session_shutdown` 时停止
-
-**限制：**
-- 仅文本消息（图片/语音/文件收到但不作为 prompt 处理）
-- 同时只支持一个微信用户
-- 二维码显示为 URL（非终端渲染的实际二维码图像）
-- 需要 pi 在交互模式下运行
 
 </Section>

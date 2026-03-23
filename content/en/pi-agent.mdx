@@ -1,6 +1,6 @@
 ---
 title: "Pi Agent — Chat with Pi from WeChat"
-description: "Pi extension that bridges WeChat to your Pi coding agent. Scan QR, chat from your phone."
+description: "Pi extension that bridges WeChat to your Pi coding agent. Scan QR, send text/images/files/voice from your phone."
 toc:
   - label: "How it works"
     href: "#how-it-works"
@@ -10,6 +10,8 @@ toc:
     href: "#usage"
   - label: "Message flow"
     href: "#message-flow"
+  - label: "Media support"
+    href: "#media-support"
   - label: "Commands"
     href: "#commands"
   - label: "Pi APIs used"
@@ -18,7 +20,7 @@ toc:
     href: "#features"
 ---
 
-A **pi extension** that bridges WeChat to your [Pi coding agent](https://github.com/badlogic/pi-mono). Scan a QR code in WeChat → chat with Pi from your phone. Uses the `@wechatbot/wechatbot` SDK for all iLink protocol operations.
+A **pi extension** that bridges WeChat to your [Pi coding agent](https://github.com/badlogic/pi-mono). Scan a QR code in WeChat → chat with Pi from your phone. Supports text, images, files, voice, and video. Uses the `@wechatbot/wechatbot` SDK for all iLink protocol operations.
 
 <Section id="how-it-works" title="How it works">
 
@@ -32,8 +34,8 @@ A **pi extension** that bridges WeChat to your [Pi coding agent](https://github.
 </CodeBlock>
 
 1. You run `/wechat` in pi
-2. Extension creates a `WeChatBot` instance (from the SDK) → calls `bot.login()`
-3. SDK calls iLink API → gets a QR code URL → displayed in pi TUI
+2. Extension creates a `WeChatBot` instance → calls `bot.login()`
+3. SDK calls iLink API → gets a QR code URL → displayed in pi terminal
 4. You scan the QR with WeChat on your phone
 5. **WeChat messages → `pi.sendUserMessage()`** → become pi prompts
 6. **`pi.on('agent_end')` → `bot.reply()`** → sent back to WeChat
@@ -43,20 +45,22 @@ A **pi extension** that bridges WeChat to your [Pi coding agent](https://github.
 
 <Section id="install" title="Install">
 
-**Option 1:** Load directly with pi:
+**From npm (recommended):**
+
+```bash
+pi install npm:@wechatbot/pi-agent
+```
+
+**Or load directly:**
 
 ```bash
 pi -e /path/to/wechatbot/pi-agent/src/index.ts
 ```
 
-**Option 2:** Copy to extensions directory (auto-loads):
+**Or copy to extensions directory (auto-loads):**
 
 ```bash
-# Global
 cp -r pi-agent/ ~/.pi/agent/extensions/wechat-bridge/
-
-# Project-local
-cp -r pi-agent/ .pi/extensions/wechat-bridge/
 ```
 
 </Section>
@@ -66,11 +70,11 @@ cp -r pi-agent/ .pi/extensions/wechat-bridge/
 ```bash
 > /wechat
 
-  ╔══════════════════════════════════════════╗
-  ║    📱 Scan this QR code in WeChat        ║
-  ╚══════════════════════════════════════════╝
+  📱 Scan this QR code in WeChat:
 
-  https://weixin.qq.com/x/cAbCdEfGhIj
+    ▄▄▄▄▄▄▄ ▄▄▄ ▄▄▄▄▄▄▄
+    █ ▄▄▄ █ █▀█ █ ▄▄▄ █
+    ...
 
 [wechat] QR scanned — confirm in WeChat
 [wechat] Login confirmed
@@ -94,7 +98,7 @@ Now send a message from WeChat — Pi receives it as a prompt, processes it, and
          │
          ├── bot.sendTyping(userId)        → "对方正在输入中..."
          │
-         ├── pi.sendUserMessage(msg.text)  → becomes pi prompt
+         ├── pi.sendUserMessage(content)   → becomes pi prompt
          │
          ▼
   Pi agent processes (tools, thinking...)
@@ -103,9 +107,39 @@ Now send a message from WeChat — Pi receives it as a prompt, processes it, and
   pi.on('agent_end') fires
          │
          ├── Extract assistant text
+         ├── stripMarkdown()               → clean for WeChat
+         ├── Detect generated file paths   → send as media
          ├── bot.stopTyping(userId)
-         └── bot.reply(msg, text)          → sent back to WeChat`}
+         └── bot.reply(msg, content)       → sent back to WeChat`}
 </CodeBlock>
+
+</Section>
+
+<Section id="media-support" title="Media support">
+
+The extension handles all WeChat message types — not just text.
+
+<ComparisonTable
+  title="Inbound (WeChat → Pi)"
+  headers={['Type', 'How it\'s handled']}
+  rows={[
+    ['Text', 'Sent directly as pi prompt'],
+    ['Image', 'Downloaded → base64 → sent as ImageContent for vision models'],
+    ['Voice', 'Uses WeChat transcription if available; otherwise downloads SILK audio'],
+    ['File', 'Text files (.txt, .md, .py, etc): content included in prompt. Others: described with metadata'],
+    ['Video', 'Downloaded → saved to temp file → pi told the file path for processing'],
+  ]}
+/>
+
+<ComparisonTable
+  title="Outbound (Pi → WeChat)"
+  headers={['Type', 'How it\'s handled']}
+  rows={[
+    ['Text', 'Markdown stripped → sent as plain text'],
+    ['Generated files', 'Detected in response → auto-sent via bot.reply({ file })'],
+    ['Auto-routing', '.png → image message, .mp4 → video message, .pdf → file attachment'],
+  ]}
+/>
 
 </Section>
 
@@ -128,34 +162,27 @@ When already connected, `/wechat` shows a menu: Disconnect, Show status, or Canc
   title="Extension API usage"
   headers={['Pi API', 'Purpose', 'When']}
   rows={[
-    ['pi.registerCommand()', '/wechat commands', 'Extension load'],
-    ['pi.sendUserMessage()', 'WeChat msg → pi prompt', 'On each message'],
-    ['pi.on(agent_end)', 'Capture response → WeChat', 'After agent finishes'],
+    ['pi.registerCommand()', '/wechat, /wechat-send, /wechat-disconnect', 'Extension load'],
+    ['pi.sendUserMessage()', 'WeChat msg → pi prompt (text or image+text)', 'On each message'],
+    ['pi.on(agent_end)', 'Capture response → stripMarkdown → send to WeChat', 'After agent finishes'],
     ['pi.on(message_update)', 'Track streaming text', 'During streaming'],
-    ['ctx.ui.setWidget()', 'Show QR code URL', 'During login'],
-    ['ctx.ui.setStatus()', 'Connection status footer', 'Throughout'],
+    ['ctx.ui.setStatus()', 'Connection status in footer', 'Throughout'],
     ['pi.on(session_shutdown)', 'Cleanup on exit', 'On shutdown'],
   ]}
 />
 
-The extension uses the `@wechatbot/wechatbot` SDK for all WeChat protocol operations — not a custom client.
-
 </Section>
 
-<Section id="features" title="Features & limitations">
+<Section id="features" title="Features">
 
-**Features:**
 - Zero config — just `/wechat` and scan
+- **Full media support** — images (vision), voice, files, video
+- **Markdown stripping** — AI output → clean plain text for WeChat
+- **Auto media routing** — generated `.png` sent as image, `.mp4` as video, etc.
 - Credential persistence — `~/.wechatbot/`, skips QR on restart
 - Session recovery — auto re-login on `-14`
 - Typing indicator — "对方正在输入中" while Pi thinks
 - Text chunking — long replies split at 2000 chars
 - Graceful shutdown — stops on `session_shutdown`
-
-**Limitations:**
-- Text messages only (images/voice/files acknowledged but not processed as prompts)
-- Single WeChat user at a time
-- QR displayed as URL (not rendered as actual QR image in terminal)
-- Requires pi in interactive mode
 
 </Section>

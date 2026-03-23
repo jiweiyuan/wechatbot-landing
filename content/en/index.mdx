@@ -1,6 +1,6 @@
 ---
 title: "WeChatBot — Modular WeChat iLink Bot SDK"
-description: "Production-grade WeChat bot SDK for Node.js, Go, and Rust. Plus a Pi agent extension for chatting with Pi from WeChat."
+description: "Production-grade WeChat bot SDK for Node.js, Python, Go, and Rust. Plus a Pi agent extension for chatting with Pi from WeChat."
 toc:
   - label: "Quick start"
     href: "#quick-start"
@@ -14,7 +14,7 @@ toc:
     href: "#protocol"
 ---
 
-A modular, extensible WeChat iLink Bot SDK — available in **Node.js**, **Go**, and **Rust**. Plus a **Pi coding agent extension** that lets you chat with Pi from WeChat. [GitHub](https://github.com/corespeed-io/wechatbot).
+A modular, extensible WeChat iLink Bot SDK — available in **Node.js**, **Python**, **Go**, and **Rust**. Plus a **Pi coding agent extension** that lets you chat with Pi from WeChat. [GitHub](https://github.com/corespeed-io/wechatbot).
 
 <DemoVideo src="/demo.mp4" caption="Scan QR in WeChat → Chat with Pi coding agent" />
 
@@ -92,7 +92,8 @@ Choose your language. All SDKs share the same architecture and capabilities.
 Chat with your [Pi coding agent](https://github.com/badlogic/pi-mono) directly from WeChat. One command, one QR scan.
 
 ```bash
-pi -e /path/to/wechatbot/pi-agent/src/index.ts
+# Install the extension (recommended)
+pi install npm:@wechatbot/pi-agent
 
 # In pi:
 /wechat        # Shows QR → scan in WeChat → connected!

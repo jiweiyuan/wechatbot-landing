@@ -2,8 +2,6 @@
 title: "WeChatBot — 模块化微信 iLink Bot SDK"
 description: "生产级微信机器人 SDK，支持 Node.js、Python、Go、Rust。内含 Pi 编程助手扩展，微信扫码即可与 Pi 对话。"
 toc:
-  - label: "一键安装"
-    href: "#install"
   - label: "快速开始"
     href: "#quick-start"
   - label: "SDK"
@@ -15,37 +13,6 @@ toc:
 模块化、可扩展的微信 iLink Bot SDK —— 提供 **Node.js**、**Python**、**Go**、**Rust** 四种语言。同时内含 **Pi 编程助手扩展**，微信扫码即可与 Pi 对话。跨平台：已在 **Linux、macOS、Windows** 上测试通过。[GitHub](https://github.com/corespeed-io/wechatbot)。 [![CI](https://github.com/corespeed-io/wechatbot/actions/workflows/ci.yml/badge.svg)](https://github.com/corespeed-io/wechatbot/actions/workflows/ci.yml)
 
 <DemoVideo src="/demo.mp4" caption="微信扫码 → 与 Pi 编程助手对话" />
-
-<Section id="install" title="一键安装">
-
-无需编译环境，预编译二进制开箱即用。支持 **Windows**、**macOS**、**Linux**。
-
-```bash
-# macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/corespeed-io/wechatbot/main/install.sh | bash
-```
-
-```powershell
-# Windows (PowerShell)
-irm https://raw.githubusercontent.com/corespeed-io/wechatbot/main/install.ps1 | iex
-```
-
-<ComparisonTable
-  title="平台支持"
-  headers={['平台', 'Go', 'Rust']}
-  rows={[
-    ['Windows x64', '✅', '✅'],
-    ['Windows ARM64', '✅', '🔜'],
-    ['macOS x64', '✅', '✅'],
-    ['macOS ARM64 (Apple Silicon)', '✅', '✅'],
-    ['Linux x64', '✅', '✅'],
-    ['Linux ARM64', '✅', '✅'],
-  ]}
-/>
-
-也可以从 [GitHub Releases](https://github.com/corespeed-io/wechatbot/releases) 直接下载。
-
-</Section>
 
 <Section id="quick-start" title="快速开始">
 

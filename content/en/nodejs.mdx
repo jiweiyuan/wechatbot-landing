@@ -22,8 +22,6 @@ toc:
     href: "#advanced"
   - label: "API reference"
     href: "#api-reference"
-  - label: "Structure"
-    href: "#structure"
 ---
 
 The Node.js SDK is the most feature-rich implementation. **69 tests**, **zero runtime dependencies**. Requires Node.js ≥ 22.
@@ -245,22 +243,3 @@ Other advanced methods: `bot.upload(opts)` for CDN upload without sending, `bot.
 
 </Section>
 
-<Section id="structure" title="Project structure">
-
-```
-nodejs/src/
-├── core/           ← Client (unified reply/send/download), events, errors
-├── transport/      ← HTTP client with retry & timeout
-├── protocol/       ← Raw iLink API calls + wire types
-├── auth/           ← QR login + credential persistence
-├── messaging/      ← Poller, Sender, Typing, ContextStore
-├── media/          ← AES crypto, CDN upload/download, MIME routing,
-│                      voice transcode, remote URL, markdown strip
-├── middleware/      ← Express-style engine + 4 builtins
-├── message/        ← Parser, Builder, friendly types
-├── storage/        ← Pluggable (file, memory, interface)
-├── logger/         ← Structured leveled logging
-└── index.ts        ← Public exports
-```
-
-</Section>

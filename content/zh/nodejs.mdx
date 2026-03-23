@@ -22,8 +22,6 @@ toc:
     href: "#advanced"
   - label: "API 参考"
     href: "#api-reference"
-  - label: "项目结构"
-    href: "#structure"
 ---
 
 Node.js SDK 是功能最丰富的实现。**69 个测试**，**零运行时依赖**。需要 Node.js ≥ 22。
@@ -228,22 +226,3 @@ await bot.sendRaw(payload)
 
 </Section>
 
-<Section id="structure" title="项目结构">
-
-```
-nodejs/src/
-├── core/           ← 客户端（统一 reply/send/download）、事件、错误
-├── transport/      ← HTTP 客户端（重试 + 超时）
-├── protocol/       ← iLink API 调用 + 线路类型
-├── auth/           ← 二维码登录 + 凭证持久化
-├── messaging/      ← 轮询器、发送器、输入状态、上下文存储
-├── media/          ← AES 加密、CDN 上传/下载、MIME 路由、
-│                      语音转码、远程 URL 下载、Markdown 清理
-├── middleware/      ← 引擎 + 4 个内置中间件
-├── message/        ← 解析器、构建器、友好类型
-├── storage/        ← 可插拔（文件、内存、接口）
-├── logger/         ← 结构化分级日志
-└── index.ts        ← 公开导出
-```
-
-</Section>

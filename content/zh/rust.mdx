@@ -16,8 +16,6 @@ toc:
     href: "#errors"
   - label: "AES 加密"
     href: "#crypto"
-  - label: "项目结构"
-    href: "#structure"
 ---
 
 Rust SDK 基于 `tokio` + `reqwest` + `serde` 构建，异步、类型安全。所有协议类型派生 `Serialize + Deserialize + Clone + Debug`。
@@ -127,16 +125,3 @@ let k = decode_aes_key("00112233445566778899aabbccddeeff")?; // hex
 
 </Section>
 
-<Section id="structure" title="项目结构">
-
-```
-rust/src/
-├── lib.rs           ← 公开导出
-├── types.rs         ← 所有类型（serde）
-├── error.rs         ← 错误层次（thiserror）
-├── protocol.rs      ← iLink API 调用（reqwest）
-├── crypto.rs        ← AES-128-ECB + 测试
-└── bot.rs           ← WeChatBot 客户端
-```
-
-</Section>

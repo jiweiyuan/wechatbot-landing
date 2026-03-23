@@ -16,8 +16,6 @@ toc:
     href: "#crypto"
   - label: "类型"
     href: "#types"
-  - label: "项目结构"
-    href: "#structure"
 ---
 
 Python SDK 基于 `aiohttp` + `asyncio`，异步优先。装饰器风格消息处理器，dataclass 类型，17 个测试。需要 Python ≥ 3.9。
@@ -128,21 +126,3 @@ class IncomingMessage:
 
 </Section>
 
-<Section id="structure" title="项目结构">
-
-```
-python/
-├── wechatbot/
-│   ├── __init__.py      ← 公开导出
-│   ├── client.py        ← WeChatBot（登录、启动、回复、发送）
-│   ├── protocol.py      ← iLink API 调用（aiohttp）
-│   ├── auth.py          ← 二维码登录 + 凭证持久化
-│   ├── types.py         ← 所有类型（dataclasses）
-│   ├── errors.py        ← 错误层次
-│   └── crypto.py        ← AES-128-ECB（cryptography）
-├── examples/echo_bot.py
-├── tests/               ← 17 个测试
-└── pyproject.toml
-```
-
-</Section>

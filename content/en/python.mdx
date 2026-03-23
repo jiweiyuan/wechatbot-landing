@@ -16,8 +16,6 @@ toc:
     href: "#crypto"
   - label: "Types"
     href: "#types"
-  - label: "Structure"
-    href: "#structure"
 ---
 
 The Python SDK is async-first, using `aiohttp` + `asyncio`. Decorator-style message handlers, dataclass types, 17 tests. Requires Python ≥ 3.9.
@@ -158,21 +156,3 @@ Error hierarchy: `WeChatBotError` → `ApiError`, `AuthError`, `NoContextError`,
 
 </Section>
 
-<Section id="structure" title="Project structure">
-
-```
-python/
-├── wechatbot/
-│   ├── __init__.py      ← Public exports
-│   ├── client.py        ← WeChatBot (login, start, reply, send)
-│   ├── protocol.py      ← Raw iLink API calls (aiohttp)
-│   ├── auth.py          ← QR login + credential persistence
-│   ├── types.py         ← All types (dataclasses)
-│   ├── errors.py        ← Error hierarchy
-│   └── crypto.py        ← AES-128-ECB (cryptography)
-├── examples/echo_bot.py
-├── tests/               ← 17 tests
-└── pyproject.toml
-```
-
-</Section>

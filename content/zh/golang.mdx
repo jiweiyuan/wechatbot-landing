@@ -16,8 +16,6 @@ toc:
     href: "#lifecycle"
   - label: "类型"
     href: "#types"
-  - label: "项目结构"
-    href: "#structure"
 ---
 
 Go SDK 简洁、地道、协程安全。**仅标准库**，无 CGO。使用 `sync.Map` 实现并发 context_token 访问。
@@ -134,18 +132,3 @@ type IncomingMessage struct {
 
 </Section>
 
-<Section id="structure" title="项目结构">
-
-```
-golang/
-├── types.go                 ← 所有公开类型
-├── bot.go                   ← Bot 客户端
-├── internal/
-│   ├── protocol/api.go      ← iLink HTTP 调用
-│   ├── auth/login.go        ← 二维码登录 + 凭证持久化
-│   └── crypto/aes.go        ← AES-128-ECB 加解密
-└── examples/
-    └── echo-bot/main.go
-```
-
-</Section>

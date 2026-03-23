@@ -16,8 +16,6 @@ toc:
     href: "#lifecycle"
   - label: "Types"
     href: "#types"
-  - label: "Structure"
-    href: "#structure"
 ---
 
 The Go SDK is clean, idiomatic, and goroutine-safe. **stdlib only**, no CGO. Uses `sync.Map` for concurrent context_token access.
@@ -145,20 +143,3 @@ type IncomingMessage struct {
 
 </Section>
 
-<Section id="structure" title="Project structure">
-
-```
-golang/
-├── types.go                 ← All public types
-├── bot.go                   ← Bot client (login, run, reply, send)
-├── internal/
-│   ├── protocol/api.go      ← Raw iLink HTTP calls
-│   ├── auth/login.go        ← QR login + credential persistence
-│   └── crypto/
-│       ├── aes.go           ← AES-128-ECB encrypt/decrypt
-│       └── aes_test.go      ← Crypto tests
-└── examples/
-    └── echo-bot/main.go
-```
-
-</Section>

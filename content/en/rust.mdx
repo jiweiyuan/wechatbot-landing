@@ -16,8 +16,6 @@ toc:
     href: "#errors"
   - label: "Crypto"
     href: "#crypto"
-  - label: "Structure"
-    href: "#structure"
 ---
 
 The Rust SDK is async, type-safe, and built on `tokio` + `reqwest` + `serde`. All protocol types derive `Serialize + Deserialize + Clone + Debug`.
@@ -146,16 +144,3 @@ let k = decode_aes_key("00112233445566778899aabbccddeeff")?; // hex
 
 </Section>
 
-<Section id="structure" title="Project structure">
-
-```
-rust/src/
-├── lib.rs           ← Public re-exports
-├── types.rs         ← All types (serde)
-├── error.rs         ← Error hierarchy (thiserror)
-├── protocol.rs      ← iLink API calls (reqwest)
-├── crypto.rs        ← AES-128-ECB + tests
-└── bot.rs           ← WeChatBot client
-```
-
-</Section>

@@ -12,7 +12,7 @@ toc:
     href: "#architecture"
 ---
 
-A modular, extensible WeChat iLink Bot SDK — available in **Node.js**, **Python**, **Go**, and **Rust**. Plus a **Pi coding agent extension** that lets you chat with Pi from WeChat. [GitHub](https://github.com/corespeed-io/wechatbot).
+A modular, extensible WeChat iLink Bot SDK — available in **Node.js**, **Python**, **Go**, and **Rust**. Plus a **Pi coding agent extension** that lets you chat with Pi from WeChat. Cross-platform: tested on **Linux, macOS, and Windows**. [GitHub](https://github.com/corespeed-io/wechatbot). [![CI](https://github.com/corespeed-io/wechatbot/actions/workflows/ci.yml/badge.svg)](https://github.com/corespeed-io/wechatbot/actions/workflows/ci.yml)
 
 <DemoVideo src="/demo.mp4" caption="Scan QR in WeChat → Chat with Pi coding agent" />
 
@@ -98,13 +98,13 @@ Choose your language. All SDKs share the same architecture and capabilities.
     href="/en/golang"
     icon="🔵"
     title="Go SDK"
-    description="Goroutine-safe, stdlib only, AES-128-ECB crypto. Clean idiomatic Go."
+    description="Goroutine-safe, stdlib only, AES-128-ECB crypto, 32 tests. Clean idiomatic Go."
   />
   <NavCard
     href="/en/rust"
     icon="🦀"
     title="Rust SDK"
-    description="Async/tokio, serde types, thiserror errors. Type-safe and zero-copy."
+    description="Async/tokio, serde types, thiserror errors, 38 tests. Type-safe and zero-copy."
   />
   <NavCard
     href="/en/pi-agent"
@@ -146,6 +146,8 @@ Shared capabilities: QR login, long-poll, context_token management, AES-128-ECB 
     ['Events', 'Typed EventEmitter', 'Callbacks'],
     ['Media', '✓ Upload + download', '✓ AES crypto'],
     ['Dependencies', '0 runtime', 'stdlib / reqwest+serde'],
+    ['Tests', '69', '32 / 38'],
+    ['Platforms', 'Linux, macOS, Windows', 'Linux, macOS, Windows'],
   ]}
 />
 

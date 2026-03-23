@@ -12,7 +12,7 @@ toc:
     href: "#architecture"
 ---
 
-模块化、可扩展的微信 iLink Bot SDK —— 提供 **Node.js**、**Python**、**Go**、**Rust** 四种语言。同时内含 **Pi 编程助手扩展**，微信扫码即可与 Pi 对话。[GitHub](https://github.com/corespeed-io/wechatbot)。
+模块化、可扩展的微信 iLink Bot SDK —— 提供 **Node.js**、**Python**、**Go**、**Rust** 四种语言。同时内含 **Pi 编程助手扩展**，微信扫码即可与 Pi 对话。跨平台：已在 **Linux、macOS、Windows** 上测试通过。[GitHub](https://github.com/corespeed-io/wechatbot)。 [![CI](https://github.com/corespeed-io/wechatbot/actions/workflows/ci.yml/badge.svg)](https://github.com/corespeed-io/wechatbot/actions/workflows/ci.yml)
 
 <DemoVideo src="/demo.mp4" caption="微信扫码 → 与 Pi 编程助手对话" />
 
@@ -98,13 +98,13 @@ await bot.start()
     href="/zh/golang"
     icon="🔵"
     title="Go SDK"
-    description="协程安全，仅标准库，AES-128-ECB 加密。地道的 Go 风格。"
+    description="协程安全，仅标准库，AES-128-ECB 加密，32 个测试。地道的 Go 风格。"
   />
   <NavCard
     href="/zh/rust"
     icon="🦀"
     title="Rust SDK"
-    description="Async/tokio，serde 类型，thiserror 错误。类型安全，零拷贝。"
+    description="Async/tokio，serde 类型，thiserror 错误，38 个测试。类型安全，零拷贝。"
   />
   <NavCard
     href="/zh/pi-agent"
@@ -146,6 +146,8 @@ await bot.start()
     ['事件', '类型化 EventEmitter', '回调函数'],
     ['媒体', '✓ 上传 + 下载', '✓ AES 加密'],
     ['依赖', '零运行时', 'stdlib / reqwest+serde'],
+    ['测试', '69', '32 / 38'],
+    ['平台', 'Linux、macOS、Windows', 'Linux、macOS、Windows'],
   ]}
 />
 

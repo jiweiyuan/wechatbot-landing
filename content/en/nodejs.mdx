@@ -1,6 +1,6 @@
 ---
 title: "Node.js SDK — @wechatbot/wechatbot"
-description: "TypeScript-first WeChat iLink Bot SDK with unified send/download API, middleware pipeline, full media support, and 69 tests."
+description: "TypeScript-first WeChat iLink Bot SDK with unified send/download API, middleware pipeline, full media support, and 77 tests."
 toc:
   - label: "Install"
     href: "#install"
@@ -16,6 +16,8 @@ toc:
     href: "#middleware"
   - label: "Storage"
     href: "#storage"
+  - label: "Multi-tenant / SaaS"
+    href: "#multi-tenant"
   - label: "Events"
     href: "#events"
   - label: "Advanced"
@@ -24,7 +26,7 @@ toc:
     href: "#api-reference"
 ---
 
-The Node.js SDK is the most feature-rich implementation. **69 tests**, **zero runtime dependencies**. Requires Node.js ≥ 22.
+The Node.js SDK is the most feature-rich implementation. **77 tests**, **zero runtime dependencies**. Requires Node.js ≥ 22.
 
 <Section id="install" title="Install">
 
@@ -59,6 +61,7 @@ const bot = new WeChatBot({
   storage: 'file',            // 'file' | 'memory' | custom Storage
   storageDir: '~/.wechatbot',
   logLevel: 'info',           // 'debug' | 'info' | 'warn' | 'error' | 'silent'
+  botAgent: 'MyApp/1.2 (prod)', // base_info.bot_agent identifier sent on every request
   loginCallbacks: {
     onQrUrl: (url) => renderQrCode(url),
     onScanned: () => console.log('Scanned!'),
@@ -165,6 +168,8 @@ Middleware that doesn't call `next()` stops the chain — perfect for auth, filt
 
 <Section id="storage" title="Pluggable storage">
 
+The SDK persists credentials, the message cursor, and other state through the `Storage` interface — five methods (`get` / `set` / `delete` / `has` / `clear`), JSON values. File storage (`~/.wechatbot`) is the default; swap in any backend:
+
 ```typescript
 // File storage (default) — survives restarts
 const bot1 = new WeChatBot({ storage: 'file' })
@@ -173,15 +178,91 @@ const bot1 = new WeChatBot({ storage: 'file' })
 const bot2 = new WeChatBot({ storage: 'memory' })
 
 // Custom — implement 5 methods
-class RedisStorage {
-  async get(key) { }
-  async set(key, value) { }
-  async delete(key) { }
-  async has(key) { }
-  async clear() { }
-}
 const bot3 = new WeChatBot({ storage: new RedisStorage() })
 ```
+
+Custom storage example — PostgreSQL (one jsonb table keyed by `(tenant_id, key)`):
+
+```typescript
+import type { Storage } from '@wechatbot/wechatbot'
+import type { Pool } from 'pg'
+
+export class PostgresStorage implements Storage {
+  constructor(private pool: Pool, private tenantId: string) {}
+
+  async get<T>(key: string): Promise<T | undefined> {
+    const { rows } = await this.pool.query(
+      'SELECT value FROM bot_storage WHERE tenant_id = $1 AND key = $2',
+      [this.tenantId, key],
+    )
+    return rows[0]?.value as T | undefined
+  }
+
+  async set<T>(key: string, value: T): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO bot_storage (tenant_id, key, value) VALUES ($1, $2, $3)
+       ON CONFLICT (tenant_id, key) DO UPDATE SET value = $3, updated_at = now()`,
+      [this.tenantId, key, JSON.stringify(value)],
+    )
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.pool.query(
+      'DELETE FROM bot_storage WHERE tenant_id = $1 AND key = $2',
+      [this.tenantId, key],
+    )
+  }
+
+  async has(key: string): Promise<boolean> {
+    return (await this.get(key)) !== undefined
+  }
+
+  async clear(): Promise<void> {
+    await this.pool.query(
+      'DELETE FROM bot_storage WHERE tenant_id = $1',
+      [this.tenantId],
+    )
+  }
+}
+```
+
+The `credentials` key grants full control of the WeChat account — encrypt it at the application layer (AES-GCM + KMS) before it hits the database.
+
+</Section>
+
+<Section id="multi-tenant" title="Multi-tenant / SaaS">
+
+Every `WeChatBot` instance is fully isolated — its own HTTP client, event emitter, and message poller, with no global state and no local ports. One backend process can run many accounts side by side. The QR code arrives via the `onQrUrl` callback, so you can push it to a web frontend and let each user scan from their own page:
+
+```typescript
+// One instance per tenant, credentials in the database (see PostgresStorage above)
+async function startTenantBot(tenantId: string) {
+  const bot = new WeChatBot({
+    storage: new PostgresStorage(pool, tenantId),
+  })
+
+  await bot.login({
+    callbacks: {
+      onQrUrl: (url) => pushQrToWebUI(tenantId, url),   // render on that user's page
+      onScanned: () => notify(tenantId, 'Scanned — waiting for confirmation'),
+      onExpired: () => refreshQr(tenantId),
+    },
+  })
+
+  bot.onMessage(async (msg) => {
+    await bot.reply(msg, await agentReply(tenantId, msg))
+  })
+
+  await bot.start()
+  return bot
+}
+```
+
+Things to watch:
+
+- **Storage isolation** — each account needs its own `storageDir` or storage namespace (the `tenantId` above); sharing one overwrites credentials.
+- **One live instance per account** — only one poller per account across your whole fleet, or message cursors overwrite each other and messages get lost or duplicated. In multi-machine deployments, use a Postgres advisory lock or a lease table to elect a single owner per account.
+- **Restart recovery** — credentials are persisted, so after a restart `login()` restores the session without a new QR scan.
 
 </Section>
 

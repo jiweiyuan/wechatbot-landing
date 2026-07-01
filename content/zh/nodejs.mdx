@@ -1,6 +1,6 @@
 ---
 title: "Node.js SDK — @wechatbot/wechatbot"
-description: "TypeScript 优先的微信 iLink Bot SDK，统一的发送/下载 API，完整媒体支持，69 个测试。"
+description: "TypeScript 优先的微信 iLink Bot SDK，统一的发送/下载 API，完整媒体支持，77 个测试。"
 toc:
   - label: "安装"
     href: "#install"
@@ -16,6 +16,8 @@ toc:
     href: "#middleware"
   - label: "存储"
     href: "#storage"
+  - label: "多租户 / SaaS"
+    href: "#multi-tenant"
   - label: "事件"
     href: "#events"
   - label: "进阶"
@@ -24,7 +26,7 @@ toc:
     href: "#api-reference"
 ---
 
-Node.js SDK 是功能最丰富的实现。**69 个测试**，**零运行时依赖**。需要 Node.js ≥ 22。
+Node.js SDK 是功能最丰富的实现。**77 个测试**，**零运行时依赖**。需要 Node.js ≥ 22。
 
 <Section id="install" title="安装">
 
@@ -59,6 +61,7 @@ const bot = new WeChatBot({
   storage: 'file',            // 'file' | 'memory' | 自定义 Storage
   storageDir: '~/.wechatbot',
   logLevel: 'info',           // 'debug' | 'info' | 'warn' | 'error' | 'silent'
+  botAgent: 'MyApp/1.2 (prod)', // 随每个请求发送的 base_info.bot_agent 标识
   loginCallbacks: {
     onQrUrl: (url) => renderQrCode(url),
     onScanned: () => console.log('已扫码！'),
@@ -163,11 +166,96 @@ bot.use(async (ctx, next) => {
 
 <Section id="storage" title="可插拔存储">
 
+SDK 通过 `Storage` 接口持久化登录凭证、消息游标等状态（共 5 个方法：`get` / `set` / `delete` / `has` / `clear`，值均为 JSON）。默认是文件存储（`~/.wechatbot`），也可以换成任何后端：
+
 ```typescript
 const bot1 = new WeChatBot({ storage: 'file' })     // 文件存储（默认）
 const bot2 = new WeChatBot({ storage: 'memory' })   // 内存存储
 const bot3 = new WeChatBot({ storage: new RedisStorage() }) // 自定义
 ```
+
+自定义存储示例 — PostgreSQL（一张 `(tenant_id, key)` 主键的 jsonb 表即可）：
+
+```typescript
+import type { Storage } from '@wechatbot/wechatbot'
+import type { Pool } from 'pg'
+
+export class PostgresStorage implements Storage {
+  constructor(private pool: Pool, private tenantId: string) {}
+
+  async get<T>(key: string): Promise<T | undefined> {
+    const { rows } = await this.pool.query(
+      'SELECT value FROM bot_storage WHERE tenant_id = $1 AND key = $2',
+      [this.tenantId, key],
+    )
+    return rows[0]?.value as T | undefined
+  }
+
+  async set<T>(key: string, value: T): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO bot_storage (tenant_id, key, value) VALUES ($1, $2, $3)
+       ON CONFLICT (tenant_id, key) DO UPDATE SET value = $3, updated_at = now()`,
+      [this.tenantId, key, JSON.stringify(value)],
+    )
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.pool.query(
+      'DELETE FROM bot_storage WHERE tenant_id = $1 AND key = $2',
+      [this.tenantId, key],
+    )
+  }
+
+  async has(key: string): Promise<boolean> {
+    return (await this.get(key)) !== undefined
+  }
+
+  async clear(): Promise<void> {
+    await this.pool.query(
+      'DELETE FROM bot_storage WHERE tenant_id = $1',
+      [this.tenantId],
+    )
+  }
+}
+```
+
+凭证（`credentials` 键）可完全操控对应微信账号，落库前建议做应用层加密（AES-GCM + KMS），不要明文存储。
+
+</Section>
+
+<Section id="multi-tenant" title="多租户 / SaaS">
+
+每个 `WeChatBot` 实例完全隔离——独立的 HTTP 客户端、事件、消息轮询器，没有全局状态，也不占用本地端口。一个后端进程可以同时运行多个账号，二维码通过 `onQrUrl` 回调拿到后推给 Web 前端，让每个用户在自己的页面上扫码：
+
+```typescript
+// 每个租户一个实例，凭证存数据库（见上一节 PostgresStorage）
+async function startTenantBot(tenantId: string) {
+  const bot = new WeChatBot({
+    storage: new PostgresStorage(pool, tenantId),
+  })
+
+  await bot.login({
+    callbacks: {
+      onQrUrl: (url) => pushQrToWebUI(tenantId, url),   // 推给该用户的页面
+      onScanned: () => notify(tenantId, '已扫码，等待确认'),
+      onExpired: () => refreshQr(tenantId),
+    },
+  })
+
+  bot.onMessage(async (msg) => {
+    await bot.reply(msg, await agentReply(tenantId, msg))
+  })
+
+  await bot.start()
+  return bot
+}
+```
+
+注意事项：
+
+- **存储隔离**：每个账号必须有独立的 `storageDir` 或存储命名空间（如上例的 `tenantId`），共用会互相覆盖凭证。
+- **单账号单实例**：同一个账号在全集群只能有一个实例在轮询，否则消息游标互相覆盖、消息漏收或重复。多机部署时用 Postgres advisory lock 或租约表保证每个账号只有一个 owner。
+- **重启恢复**：凭证已持久化，进程重启后 `login()` 会自动用已有凭证恢复会话，无需重新扫码。
 
 </Section>
 
